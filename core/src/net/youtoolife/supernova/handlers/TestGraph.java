@@ -16,22 +16,19 @@
 
 package net.youtoolife.supernova.handlers;
 
-import java.util.Iterator;
-
 import com.badlogic.gdx.ai.pfa.Connection;
-import com.badlogic.gdx.ai.pfa.GraphPath;
-import com.badlogic.gdx.ai.pfa.indexed.IndexedHierarchicalGraph;
+import com.badlogic.gdx.ai.pfa.indexed.IndexedGraph;
 import com.badlogic.gdx.utils.Array;
 
 
-public class TestGraph implements GraphPath<Node> {
+public class TestGraph implements IndexedGraph<Node> {
     
 	public TestGraph(int aSize) {
         super();
     }
 
     public void addNode(Node aNodes) {
-    		this.add(aNodes);
+    		//this.add(aNodes);
     }
 
     public Node getNode(int aIndex) {
@@ -40,39 +37,21 @@ public class TestGraph implements GraphPath<Node> {
 
 
 	@Override
-	public Iterator<Node> iterator() {
+	public Array<Connection<Node>> getConnections(Node fromNode) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public int getCount() {
+	public int getIndex(Node node) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public Node get(int index) {
+	public int getNodeCount() {
 		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void add(Node node) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void clear() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void reverse() {
-		// TODO Auto-generated method stub
-		
+		return 0;
 	}
 
 }

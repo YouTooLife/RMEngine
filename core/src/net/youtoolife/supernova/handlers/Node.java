@@ -17,7 +17,6 @@
 package net.youtoolife.supernova.handlers;
 
 import com.badlogic.gdx.ai.pfa.Connection;
-import com.badlogic.gdx.ai.pfa.indexed.*;
 import com.badlogic.gdx.ai.pfa.DefaultConnection;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
