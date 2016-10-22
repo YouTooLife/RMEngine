@@ -89,7 +89,7 @@ public class Player extends RMESprite implements Json.Serializable {
 			body.createFixture(fixtureDef);
 			body.setUserData(this);
 			shape.dispose();
-			System.out.print("body: "+body.getPosition().x+":"+body.getPosition().y);
+			//System.out.print("body: "+body.getPosition().x+":"+body.getPosition().y);
 		}
 	 
 	 public void update(float delta) {
@@ -347,6 +347,11 @@ public class Player extends RMESprite implements Json.Serializable {
 			fall = false;
 			break;
 		}
+	}
+	
+	public void draw(SpriteBatch batcher) {
+		super.draw(batcher);
+		drawCircle(batcher);
 	}
 	
 	public void drawCircle(SpriteBatch batcher) {

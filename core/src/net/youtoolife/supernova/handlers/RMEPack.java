@@ -1,11 +1,17 @@
 package net.youtoolife.supernova.handlers;
 
+import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
+import net.youtoolife.supernova.handlers.ai.AStarMap;
+import net.youtoolife.supernova.handlers.ai.AStartPathFinding;
+import net.youtoolife.supernova.handlers.ai.GraphGenerator;
+import net.youtoolife.supernova.handlers.ai.GraphPathImp;
+import net.youtoolife.supernova.handlers.ai.Node;
 import net.youtoolife.supernova.models.Background;
 import net.youtoolife.supernova.models.Bullet;
 import net.youtoolife.supernova.models.CheckPoint;
@@ -39,12 +45,23 @@ public class RMEPack implements Json.Serializable {
 	
 	private boolean game = false;
 	
+	
+	public AStartPathFinding pathfinder;
+	public int mapWidth, mapHeight;
+	public AStarMap aStarMap;
+	
+	
+	public IndexedAStarPathFinder<Node> pathFinder;
+    public GraphPathImp resultPath = new GraphPathImp();
+	
 	public RMEPack() {
 		
 	}
+	
 
 	public RMEPack(Player player, Array<RMESprite> arr) {
 		this.setPlayer(player);
+		
 	}
 
 	public Player getPlayer() {
@@ -160,6 +177,10 @@ public class RMEPack implements Json.Serializable {
 		objects = json.readValue("objects", Array.class, jsonData);
 		player = json.readValue("player", Player.class, jsonData);
 		opps = json.readValue("opponents", Array.class, jsonData);
+		
+		
+		System.out.println("walls count:" +walls.size);
+		aiSetup();
 	}
 	
 	public void update (float delta) {
@@ -219,7 +240,7 @@ public class RMEPack implements Json.Serializable {
 
 		if (player != null) {
 			player.draw(batcher);
-			player.drawCircle(batcher);
+			//player.drawCircle(batcher);
 		}
 		
 		///
@@ -280,6 +301,7 @@ public class RMEPack implements Json.Serializable {
 					shapeRenderer.setColor(sur.getColor());
 				shapeRenderer.rect(sur.getX(), sur.getY(), sur.getWidth(), sur.getHeight());
 				}
+				sur.drawWay(shapeRenderer);
 			}
 	}
 	
@@ -326,8 +348,51 @@ public class RMEPack implements Json.Serializable {
 				//shapeRenderer.setColor(sur.getColor());
 				if (sur.isRect())
 				shapeRenderer.rect(sur.getX(), sur.getY(), sur.getWidth(), sur.getHeight());
+				
+				sur.drawWayLine(shapeRenderer);
 			}
 	}
+	
+
+	
+	public void aiSetup() {
+		mapWidth = 10000 / 128;
+		mapHeight = 10000 / 128;
+		
+		Node[][] map;
+		map = new Node[mapHeight][mapWidth];
+		Array<Node> nodes = new Array<Node>();
+		
+		 for (int y = 0; y < mapHeight; y++) {
+	           for (int x = 0; x < mapWidth; x++) {
+	         	 map[y][x] = new Node(x, y);
+	         	 //System.out.println(x+":"+y+" = "+isWall(x,y));
+	         		 map[y][x].isWall = isWall(x, y);
+	         	 nodes.add(map[y][x]);
+	           }
+	        }	
+		
+		pathFinder = new IndexedAStarPathFinder<Node>(
+				GraphGenerator.genGraph(mapWidth, mapHeight, map, nodes), false);
+		//updateMap();
+	}
+	
+	 public boolean isWall(int x, int y) {
+		 	
+			if (walls != null)
+			for (Wall wall:walls)
+				if (wall.getBoundingRectangle().contains(x*128+64, y*128+64))
+					return true;
+			if (doors != null)
+			for (Door wall:doors)
+				if (wall.getBoundingRectangle().contains(x*128+64, y*128+64))
+					return true;
+			return false;
+		}
+	
+	
+	
+	
 	
 	public void drawBackground(SpriteBatch batcher) {
 		background.draw(batcher);
@@ -386,6 +451,9 @@ public class RMEPack implements Json.Serializable {
 		remBullet.add(wall);
 		//Surface.world.destroyBody(wall.getBody());
 	}
+	
+	
+	
 	
 	
 

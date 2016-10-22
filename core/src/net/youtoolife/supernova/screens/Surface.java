@@ -5,20 +5,28 @@ import com.badlogic.gdx.Input.TextInputListener;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.ai.pfa.Connection;
 import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
+import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.VertexAttribute;
+import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
@@ -28,18 +36,20 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 
 import net.youtoolife.supernova.Assets;
 import net.youtoolife.supernova.RMEBuilder;
-import net.youtoolife.supernova.handlers.ManhattanDistanceHeuristic;
-import net.youtoolife.supernova.handlers.Node;
 import net.youtoolife.supernova.handlers.RMECrypt;
 import net.youtoolife.supernova.handlers.RMEPack;
 import net.youtoolife.supernova.handlers.RMESound;
 import net.youtoolife.supernova.handlers.TestGraph;
 import net.youtoolife.supernova.handlers.WorldContactListener;
+import net.youtoolife.supernova.handlers.ai.AStarMap;
+import net.youtoolife.supernova.handlers.ai.AStartPathFinding;
+import net.youtoolife.supernova.handlers.ai.Node;
 import net.youtoolife.supernova.models.CheckPoint;
 import net.youtoolife.supernova.models.Door;
 import net.youtoolife.supernova.models.ObjectX;
@@ -102,13 +112,15 @@ public class Surface extends ScreenAdapter {
 	
 	/////
 	ShapeRenderer pathSR;
-    IndexedAStarPathFinder<Node> mPathFinder;
-    TestGraph mGraph;
-    DefaultGraphPath<Node> mPath;
-    ManhattanDistanceHeuristic mHeuristic;
-    Array<Node> mNodes = new Array<Node>();
-    Node startNode = null; //Hardcoded for now
-    Node endNode = null; //Hardcoded for now
+	
+	
+	public ShaderProgram shaderOutline;
+	ShaderProgram shader;
+	
+	Mesh mesh;
+	Texture texture;
+	
+	float time  = 0;
 
 	public Surface (final RMEBuilder game) {
 		this.game = game;
@@ -120,6 +132,7 @@ public class Surface extends ScreenAdapter {
 		world.setContactListener(new WorldContactListener());
 		
 		guiCam.position.set(width / 2, height / 2, 0);
+		
 		
 		Gdx.input.setInputProcessor(new InputProcessor() {
 			
@@ -253,11 +266,7 @@ public class Surface extends ScreenAdapter {
 						sNode = false;
 				}
 				if (keycode == Keys.Y) {
-					if (pack.getPlayer() != null) {
-						
-						endNode = surfaceNodeAt(pack.getPlayer().getX()+10, pack.getPlayer().getY()+10);
-						calculatePath();
-					}
+				
 				}
 				if (keycode == Keys.Z) {
 					if (!drawShape)
@@ -387,59 +396,31 @@ public class Surface extends ScreenAdapter {
 		//delMsg.s
 		
 		
-		mGraph = new TestGraph(200);
-        mPath = new DefaultGraphPath<Node>();
-        mHeuristic = new ManhattanDistanceHeuristic();
-        
+		
+		
         //calc();
         //RMESound.playTrack("03");
         //RMESound.play();
+		
+		/*ShaderProgram.pedantic = false;
+		shader = new ShaderProgram(Gdx.files.local("default.vert"), 
+				(Gdx.files.local("invertColors.frag")));
+		if (!shader.isCompiled()) {
+			System.err.println(shader.getLog());
+			System.exit(0);
+		}*/
+		ShaderProgram.pedantic = false;
+		loadShader();
+		
+		mesh = new Mesh(true, 4, 6, new VertexAttribute(Usage.Position, 2, "a_position"));
+		mesh.setVertices(new float[]{0, 0,
+                width, 0,
+                0, height,
+                width, height});
+		mesh.setIndices(new short[]{0, 1, 3, 0, 3, 2});
 	}
 	
-	private void calc() {
-		int index = 0;
-		for (SurfaceX sur:pack.getSurface()) {
-        	mNodes.add(new Node(sur.getX(), sur.getY(), index++));
-        	mGraph.addNode(mNodes.peek());
-        }
-        for (Node node: mNodes) {
-        		addNodeNeighbour(node, node.mX-node.TILE_SIZE/2, node.mY+node.TILE_SIZE/2);
-        		addNodeNeighbour(node, node.mX+(node.TILE_SIZE/2)*3, node.mY+node.TILE_SIZE/2);
-        		addNodeNeighbour(node, node.mX+node.TILE_SIZE/2, node.mY-node.TILE_SIZE/2);
-        		addNodeNeighbour(node, node.mX+node.TILE_SIZE/2, node.mY+(node.TILE_SIZE/2)*3);
-        }
-	   //mPathFinder = new IndexedAStarPathFinder<Node>(mGraph, true);
-	        
-	}
 	
-	public Node surfaceNodeAt(float x, float y) {
-		for (Node node: mNodes)
-			if (x >= node.mX && x <= (node.mX+node.TILE_SIZE) && y <= (node.mY+node.TILE_SIZE) && y >= node.mY)
-				return node;
-		return null;
-	}
-	
-	private void addNodeNeighbour(Node aNode, float aX, float aY) {
-		Node node = surfaceNodeAt(aX, aY);
-		if (node != null)
-            aNode.addNeighbour(node);
-    }
-
-    private void calculatePath() {
-        mPath.clear();
-        mPathFinder.searchNodePath(startNode, endNode, mHeuristic, mPath);
-
-        if (mPath.nodes.size == 0) {
-            System.out.println("-----No path found-----");
-        } else {
-            System.out.println("-----Found path-----");
-        }
-        // Loop throw every node in the solution and select it.
-        for (Node node : mPath.nodes) {
-            node.select();
-            System.out.println(node);
-        }
-    }
 	
 	public void createGui() {
 		skin = new Skin(Gdx.files.internal("uiskin.json"));
@@ -479,6 +460,16 @@ public class Surface extends ScreenAdapter {
 		//System.out.println("Absolutly:\n"+x+" - "+y);
 		//System.out.println(X+" - "+Y);
 	}
+	
+	public void loadShader() {
+		String vertexShader;
+		String fragmentShader;
+		vertexShader = Gdx.files.local( "vertex.glsl").readString();
+		fragmentShader = Gdx.files.local("test.glsl").readString();
+		shader = new ShaderProgram(vertexShader, fragmentShader);
+		if (!shader.isCompiled()) throw 
+		new GdxRuntimeException("Couldn't compile shader: " + shader.getLog());
+		}
 
 	private void addObject() {
 		
@@ -488,8 +479,8 @@ public class Surface extends ScreenAdapter {
 				pack.del(rect.getX()+128*i, rect.getY()+128*j);
 		
 		if (sNode) {
-			startNode = surfaceNodeAt(rect.getX()+rect.width/2, rect.getY()+rect.height/2);
-			calc();
+			//startNode = surfaceNodeAt(rect.getX()+rect.width/2, rect.getY()+rect.height/2);
+			//calc();
 		}
 		
 		
@@ -724,14 +715,47 @@ public class Surface extends ScreenAdapter {
 		debugCam.position.x = (guiCam.position.x-128.f/2)/MP;
 		debugCam.position.y = (guiCam.position.y-128.f/2)/MP;
 		debugCam.update();
+		
+		time += Gdx.graphics.getDeltaTime()*5f;//*0.3f;
+		ShaderProgram.pedantic = false;
+		shader.begin();
+		shader.setUniformf("time", time);
+		//shader.setUniformf("iGlobalTime", time);
+		//shader.setUniformf("iTimeDelta", Gdx.graphics.getDeltaTime());
+		//shader.setUniformf("mouse", new Vector2(guiCam.position.x*0.001f, guiCam.position.y*0.001f));
+		shader.setUniformf("resolution", new Vector2(width/2, height/2));
+		//shader.setUniformf("iResolution", new Vector2(width, height));
+		
+		
+		//  = new Matrix4(); // also tried OrthographicCamera and SpriteBatch.getProjectionMatrix() here...
+		shader.setUniformMatrix("u_projTrans",guiCam.combined);
+		/*mesh.setVertices(new float[]{guiCam.position.x-width/2, guiCam.position.y-height/2,
+				guiCam.position.x+width-width/2, guiCam.position.y-height/2,
+				guiCam.position.x-width/2, height+guiCam.position.y-height/2,
+				guiCam.position.x+width-width/2, height+guiCam.position.y-height/2});*/
+		mesh.setVertices(new float[]{0-300.f, 0,
+				width-300.f, 0,
+				0-300.f, height,
+				width-300.f, height});
+		mesh.render(shader, GL20.GL_TRIANGLES);
+		/*shader.setUniformf("u_lightPos", (pack.getPlayer() != null ? 
+				new Vector2(pack.getPlayer().getX(), pack.getPlayer().getY())
+				:new Vector2(100, 0)));*/
+		shader.end();
+		
+		
+		
 		game.batcher.setProjectionMatrix(guiCam.combined);
+		
+		
+		//game.batcher.setShader(shader);
 		
 		game.batcher.disableBlending();
 		game.batcher.begin();
-		pack.drawBackground(game.batcher);
+		//pack.drawBackground(game.batcher);
 		game.batcher.end();
 		
-		
+		game.batcher.setShader(null);
 		//game.batcher.enableBlending();
 		//game.batcher.begin();
 
@@ -778,12 +802,31 @@ public class Surface extends ScreenAdapter {
 		shapeRenderer.end();	
 		
 		
+		
+		/*shaderOutline.begin();
+		shaderOutline.setUniformf("u_viewportInverse", new Vector2(1f / 128.f, 1f / 128.f));
+		shaderOutline.setUniformf("u_offset", 2.f);
+		shaderOutline.setUniformf("u_step", Math.min(1f, 128 / 70f));
+		shaderOutline.setUniformf("u_color", new Vector3(123.f/255.f, 1.f, 71.f/255.f));
+		shaderOutline.end();*/
+		
+		//game.batcher.setShader(shader);
+		//game.batcher.setShader(shaderOutline);
+		
+
+		
+		//game.batcher.setShader(shader);
+		
 		game.batcher.enableBlending();
 		game.batcher.begin();
 	/////-------GAME-------////
 		pack.draw(game.batcher);
+		game.batcher.end();
+		game.batcher.setShader(null);
 		
 			////----GUI----///
+		game.batcher.enableBlending();
+		game.batcher.begin();
 			if (debug) {
 			for (Sprite sprite : types) {
 				sprite.draw(game.batcher);
@@ -793,7 +836,10 @@ public class Surface extends ScreenAdapter {
 			}
 			}
 			game.batcher.end();
-	    
+	  game.batcher.setShader(null);
+
+			
+			
 	    if (debug) {
 	    	
 	    	if (!guiTouch && touched)
@@ -825,12 +871,39 @@ public class Surface extends ScreenAdapter {
 		}
 		shapeRenderer.end();
 		
-		shapeRenderer.begin(ShapeType.Line);
-		for (Node node: mNodes)
-			node.render(shapeRenderer);
+		
+		/*shapeRenderer.begin(ShapeType.Filled);
+		//for (Node node: mNodes)
+		//	node.render(shapeRenderer);
+		if (pack.isGame() && pack.getPlayer() != null) {
+			Vector2 target = new Vector2(10*128/128, 10*128/128);
+			Vector2 source = new Vector2(pack.getPlayer().getX()/128, pack.getPlayer().getY()/128);
+			Node node = pathfinder.findNextNode(source, target);
+			shapeRenderer.setColor(Color.GREEN);
+			if (node != null)
+			shapeRenderer.rect(node.x*128, node.y*128, 128, 128);
+			shapeRenderer.setColor(Color.RED);
+			shapeRenderer.rect(source.x*128, source.y*128, 128, 128);
+			shapeRenderer.rect(target.x*128, target.y*128, 128, 128);
+		}
 		shapeRenderer.end();
 		
-		
+		shapeRenderer.begin(ShapeType.Line);
+		shapeRenderer.setColor(Color.BLUE);
+		if (pack.isGame() && pack.getPlayer() != null) {
+			GraphPath<Connection<Node>> path = pathfinder.getPath();
+			if (path != null) {
+				for (int i = 0; i < path.getCount(); i++) {
+					shapeRenderer.rect(path.get(i).getToNode().x*128, 
+							path.get(i).getToNode().x*128, 128, 128);
+					shapeRenderer.setColor(Color.YELLOW);
+					shapeRenderer.rect(path.get(i).getFromNode().x*128, 
+							path.get(i).getFromNode().x*128, 128, 128);
+				}
+			}
+		}
+		shapeRenderer.end();
+		*/
 	    stage.act(Gdx.graphics.getDeltaTime());
 		stage.draw();
 
@@ -866,7 +939,7 @@ public class Surface extends ScreenAdapter {
 	    }
 	    
 	    //b2dr.render(world, debugMatrix);
-	    b2dr.render(world, debugCam.combined);
+	    //b2dr.render(world, debugCam.combined);
 	    
 	}
 
