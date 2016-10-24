@@ -1,3 +1,11 @@
+
+
+//res:/5
+//screen:/4
+//draw screen: orig
+//x:0;y:-h*0.75
+
+
 #ifdef GL_ES
 precision mediump float;
 #endif

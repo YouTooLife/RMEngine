@@ -10,16 +10,20 @@ import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap.Format;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
@@ -43,7 +47,9 @@ import com.badlogic.gdx.utils.viewport.StretchViewport;
 import net.youtoolife.supernova.Assets;
 import net.youtoolife.supernova.RMEBuilder;
 import net.youtoolife.supernova.handlers.RMECrypt;
+import net.youtoolife.supernova.handlers.RMEInputProcessor;
 import net.youtoolife.supernova.handlers.RMEPack;
+import net.youtoolife.supernova.handlers.RMEShader;
 import net.youtoolife.supernova.handlers.RMESound;
 import net.youtoolife.supernova.handlers.TestGraph;
 import net.youtoolife.supernova.handlers.WorldContactListener;
@@ -71,15 +77,17 @@ public class Surface extends ScreenAdapter {
 	public static OrthographicCamera guiCam = new OrthographicCamera(width, height); 
 	public static OrthographicCamera debugCam = new OrthographicCamera(width/MP, height/MP); 
 	
+	
+	
 	ShapeRenderer shapeRenderer = new ShapeRenderer();
 	
-	Rectangle rect = new Rectangle(0, 0, 128, 128);	
-	Rectangle rect2 = new Rectangle(100, 0, 100, 100);
+	public static Rectangle rect = new Rectangle(0, 0, 128, 128);	
+	public static Rectangle rect2 = new Rectangle(100, 0, 100, 100);
 	
 	Texture bg;
 	
-	boolean touched = false;
-	float sX, X, sY, Y, sx, sy;
+	public static boolean touched = false;
+	public static float sX, X, sY, Y, sx, sy;
 	
 	Stage stage;
 	Skin skin;
@@ -96,13 +104,13 @@ public class Surface extends ScreenAdapter {
 	
 	private BitmapFont dbgMsg; 
 	
-	private Boolean guiTouch = false, 
+	public static Boolean guiTouch = false, 
 			del = false,
 			debug = true, drawRect = false, drawShape = false, sNode = false;
 	
-	private int cl = 0;
+	public static int cl = 0;
 	public static Color currentColor = new Color(1.f, 1.f, 1.f, 1.f);
-	private float alpha = 1.f;
+	public static float alpha = 1.f;
 	
 	private BitmapFont curColor = new BitmapFont();
 	private BitmapFont curAlpha = new BitmapFont(); 
@@ -114,13 +122,20 @@ public class Surface extends ScreenAdapter {
 	ShapeRenderer pathSR;
 	
 	
-	public ShaderProgram shaderOutline;
-	ShaderProgram shader;
+	//public ShaderProgram shaderOutline;
+	//ShaderProgram shader;
+	//ShaderProgram sh1;
+	FrameBuffer frameBuff;
+	TextureRegion bufferTexture;
+	
+	public OrthographicCamera shaderCam; 
+	public float div = 1;
 	
 	Mesh mesh;
 	Texture texture;
 	
-	float time  = 0;
+	float time  = 0, tm2 = 0;
+	boolean sp = false;
 
 	public Surface (final RMEBuilder game) {
 		this.game = game;
@@ -134,9 +149,12 @@ public class Surface extends ScreenAdapter {
 		guiCam.position.set(width / 2, height / 2, 0);
 		
 		
+		
 		Gdx.input.setInputProcessor(new InputProcessor() {
 			
 			private void setColor(int cl) {
+				
+				
 				switch (cl) {
 				case 0:
 					currentColor = new Color(1.f, 1.f, 1.f, alpha);
@@ -157,11 +175,12 @@ public class Surface extends ScreenAdapter {
 			
 			@Override
 			public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+				
 				if (touched) {
 					touched = false;
 					if (!guiTouch) {
-						doClick();
-						addObject();
+						Surface.doClick();
+						Surface.addObject();
 					}
 					//System.out.println(X+" - "+Y);
 					guiTouch = false;
@@ -171,8 +190,10 @@ public class Surface extends ScreenAdapter {
 			
 			@Override
 			public boolean touchDragged(int screenX, int screenY, int pointer) {
+				
+				
 				if (touched && !guiTouch) {
-					doClick();
+					Surface.doClick();
 					if (X >= sX) {
 						rect.setX(sX);
 						rect.setWidth(X+128-sX);
@@ -196,7 +217,7 @@ public class Surface extends ScreenAdapter {
 			@Override
 			public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 				if (!touched && guiCam.zoom == 1.f) {
-					upDateClick();
+					Surface.upDateClick();
 					
 						for (Sprite sprite : types)
 							if (sprite.getBoundingRectangle().contains(sx, sy)) {
@@ -227,6 +248,7 @@ public class Surface extends ScreenAdapter {
 			
 			@Override
 			public boolean scrolled(int amount) {
+				OrthographicCamera guiCam = Surface.guiCam;
 				guiCam.zoom = guiCam.zoom + amount*Gdx.graphics.getDeltaTime()*5;
 				return true;
 			}
@@ -239,6 +261,7 @@ public class Surface extends ScreenAdapter {
 			
 			@Override
 			public boolean keyUp(int keycode) {
+		
 				
 				////
 				if (keycode == Keys.R) {
@@ -265,9 +288,13 @@ public class Surface extends ScreenAdapter {
 					else
 						sNode = false;
 				}
-				if (keycode == Keys.Y) {
 				
+				
+				if (keycode == Keys.Y) {
+						sp = sp?false:true;
 				}
+				
+				
 				if (keycode == Keys.Z) {
 					if (!drawShape)
 						drawShape = true;
@@ -388,7 +415,7 @@ public class Surface extends ScreenAdapter {
 		createGui();
 		refreshTypes();
 		
-		dbgMsg = new BitmapFont(Gdx.files.local("HelveticaNeue.fnt"));
+		dbgMsg = Assets.getFontByName("HelveticaNeue.fnt");//new BitmapFont(Gdx.files.local("HelveticaNeue.fnt"));
 		
 		//dbgMsg.setColor(Color.PURPLE);
 		//dbgMsg.setScale(1.5f);
@@ -409,15 +436,20 @@ public class Surface extends ScreenAdapter {
 			System.err.println(shader.getLog());
 			System.exit(0);
 		}*/
-		ShaderProgram.pedantic = false;
-		loadShader();
 		
-		mesh = new Mesh(true, 4, 6, new VertexAttribute(Usage.Position, 2, "a_position"));
-		mesh.setVertices(new float[]{0, 0,
-                width, 0,
-                0, height,
-                width, height});
-		mesh.setIndices(new short[]{0, 1, 3, 0, 3, 2});
+		div = 1;
+		
+		shaderCam = new OrthographicCamera(width/div, height/div); 
+		shaderCam.position.set((width/div)/2, (height/div)/2, 0);
+		
+
+		frameBuff = new FrameBuffer(Format.RGBA8888, (int)(width/div), (int)(height/div), true);
+		bufferTexture = new TextureRegion(frameBuff.getColorBufferTexture());
+		
+		
+		pack.addShader(new RMEShader("space01.glsl"));
+		pack.addShader(new RMEShader("test.glsl"));
+		
 	}
 	
 	
@@ -428,7 +460,7 @@ public class Surface extends ScreenAdapter {
 		//Gdx.input.setInputProcessor(stage);
 	}
 	
-	private void upDateClick() {
+	public static void upDateClick() {
 		float w = width, h = height, 
 				dw = w/guiCam.viewportWidth, dh = h/guiCam.viewportHeight, 
 				cX = Gdx.input.getX(), cY = Gdx.input.getY();
@@ -440,7 +472,7 @@ public class Surface extends ScreenAdapter {
 				sy += guiCam.position.y-(height/2);
 	}
 	
-	private void doClick() {
+	public static void doClick() {
 
 		upDateClick();
 		
@@ -461,17 +493,9 @@ public class Surface extends ScreenAdapter {
 		//System.out.println(X+" - "+Y);
 	}
 	
-	public void loadShader() {
-		String vertexShader;
-		String fragmentShader;
-		vertexShader = Gdx.files.local( "vertex.glsl").readString();
-		fragmentShader = Gdx.files.local("test.glsl").readString();
-		shader = new ShaderProgram(vertexShader, fragmentShader);
-		if (!shader.isCompiled()) throw 
-		new GdxRuntimeException("Couldn't compile shader: " + shader.getLog());
-		}
+	
 
-	private void addObject() {
+	public static void addObject() {
 		
 		if (del)
 			for (int i = 0; i < rect.width/128; i++)
@@ -698,6 +722,61 @@ public class Surface extends ScreenAdapter {
 	}
 	
 
+	
+	public void drawFBO(RMEShader rshader) {
+		
+		shaderCam.update();
+		frameBuff.begin();
+		
+		GL20 gl = Gdx.gl;
+		gl.glEnable(GL20.GL_BLEND);
+		gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+		gl.glClearColor(0, 0, 0, 0);
+		gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+		
+		
+		rshader.update(Gdx.graphics.getDeltaTime());
+		
+		ShaderProgram.pedantic = false;
+		
+		ShaderProgram shader = rshader.shader;
+		
+		shader.begin();
+		shader.setUniformf("time", rshader.time);
+		shader.setUniformf("mouse", new Vector2(guiCam.position.x*0.001f, guiCam.position.y*0.001f));
+		shader.setUniformf("resolution", rshader.resolution);
+		shader.setUniformf("u_color", new Vector3(currentColor.r,currentColor.g,currentColor.b));
+		shader.setUniformMatrix("u_projTrans",shaderCam.combined);
+		
+		rshader.mesh.render(rshader.shader, GL20.GL_TRIANGLES);
+		
+		shader.end();
+		
+		//game.batcher.begin();
+		
+		//guiCam.setToOrtho(true);
+		
+		//guiCam.update();
+		//game.batcher.setProjectionMatrix(guiCam.combined);
+		
+		
+		//game.batcher.end();
+		
+		//guiCam.setToOrtho(false);
+		frameBuff.end();
+		
+		
+		game.batcher.setShader(null);
+		game.batcher.setProjectionMatrix(guiCam.combined);
+		game.batcher.enableBlending();
+		game.batcher.begin();
+		//game.batcher.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_ALPHA);
+		game.batcher.draw(bufferTexture, 0, 0, width, height);
+		//game.batcher.draw(Assets.getTexture("Surface/sur"),0,0,width/2, height/2);
+		game.batcher.end();
+		
+		
+	}
 	public void draw () {
 		
 		//Matrix4 debugMatrix = guiCam.combined.cpy().scale(MP, MP, 0.f);
@@ -716,32 +795,11 @@ public class Surface extends ScreenAdapter {
 		debugCam.position.y = (guiCam.position.y-128.f/2)/MP;
 		debugCam.update();
 		
-		time += Gdx.graphics.getDeltaTime()*5f;//*0.3f;
-		ShaderProgram.pedantic = false;
-		shader.begin();
-		shader.setUniformf("time", time);
-		//shader.setUniformf("iGlobalTime", time);
-		//shader.setUniformf("iTimeDelta", Gdx.graphics.getDeltaTime());
-		//shader.setUniformf("mouse", new Vector2(guiCam.position.x*0.001f, guiCam.position.y*0.001f));
-		shader.setUniformf("resolution", new Vector2(width/2, height/2));
-		//shader.setUniformf("iResolution", new Vector2(width, height));
 		
 		
-		//  = new Matrix4(); // also tried OrthographicCamera and SpriteBatch.getProjectionMatrix() here...
-		shader.setUniformMatrix("u_projTrans",guiCam.combined);
-		/*mesh.setVertices(new float[]{guiCam.position.x-width/2, guiCam.position.y-height/2,
-				guiCam.position.x+width-width/2, guiCam.position.y-height/2,
-				guiCam.position.x-width/2, height+guiCam.position.y-height/2,
-				guiCam.position.x+width-width/2, height+guiCam.position.y-height/2});*/
-		mesh.setVertices(new float[]{0-300.f, 0,
-				width-300.f, 0,
-				0-300.f, height,
-				width-300.f, height});
-		mesh.render(shader, GL20.GL_TRIANGLES);
-		/*shader.setUniformf("u_lightPos", (pack.getPlayer() != null ? 
-				new Vector2(pack.getPlayer().getX(), pack.getPlayer().getY())
-				:new Vector2(100, 0)));*/
-		shader.end();
+		
+		
+		
 		
 		
 		
@@ -817,12 +875,23 @@ public class Surface extends ScreenAdapter {
 		
 		//game.batcher.setShader(shader);
 		
+		
+		
+		//game.batcher.setProjectionMatrix(guiCam.combined);
+		
+		
 		game.batcher.enableBlending();
 		game.batcher.begin();
 	/////-------GAME-------////
 		pack.draw(game.batcher);
 		game.batcher.end();
-		game.batcher.setShader(null);
+		//game.batcher.setShader(null);
+		
+		
+		if (pack.getShaders() != null)
+		for (RMEShader shader:pack.getShaders())
+			drawFBO(shader);
+		
 		
 			////----GUI----///
 		game.batcher.enableBlending();
@@ -911,7 +980,7 @@ public class Surface extends ScreenAdapter {
 		///----dbg---///
 		game.batcher.begin();
 			dbgMsg.draw(game.batcher, 
-					"FPS: "+String.valueOf(Gdx.graphics.getFramesPerSecond()),
+					"FPS: "+String.valueOf(Gdx.graphics.getFramesPerSecond())+" | "+"Привет мир!",
 					guiCam.position.x-(width/2)+10.f,
 					guiCam.position.y-(height/2)+height-10.f);
 			if (pack.getPlayer() != null)

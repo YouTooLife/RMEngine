@@ -1,27 +1,100 @@
 package net.youtoolife.supernova;
 
 
+import java.awt.datatransfer.StringSelection;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.ObjectMap;
 
+import net.youtoolife.supernova.handlers.RMESettings;
 import net.youtoolife.supernova.handlers.RMESound;
 
 public class Assets {
 	
+	
+	public static boolean bassMode = true;
+	public static String lang = "ru";
+	public static String login = System.getProperty("user.name"), passWord = "toor";
+	
+	public static RMESettings settings;
+	
 	public static Array<Texture> textures;
 	private static Array<String> textureNames;
 	
+	public static ObjectMap<String, String> strs;
+	public static ObjectMap<String, BitmapFont> fonts;
+	
 	public static Texture field;
 	
-	//public static String login = System.getProperty("user.name"), passWord = "toor";
+	
 	
 	public static void load () {
-		if (RMEBuilder.bassMode)
-		RMESound.loadFiles("SFX/");
+		
+		if (bassMode) {
+			RMESound.initNativeBass();
+			RMESound.loadFiles("SFX/");
+		}
 		loadIntTextures("textures/");
 		loadTextures("textures/");
+		loadStrings("contents/");
+		loadSettings("contents/");
+		loadFonts("contents/");
+	}
+	
+	
+	private static void loadFonts(String dir) {
+		
+		fonts = new ObjectMap<String, BitmapFont>();
+		FileHandle[] files = Gdx.files.local(dir).list();
+		for (FileHandle file:files) {
+			if (file.exists() && file.extension().equalsIgnoreCase("fnt")) {
+				System.out.println(file);
+				fonts.put(file.name(), new BitmapFont(file));
+			}
+		}
+		
+		System.out.println("Bitmapfonts succesfully loaded");
+		
+	}
+	
+	public static BitmapFont getFontByName(String name) {
+		return fonts.get(name);
+	}
+	
+	
+	
+	
+	private static void loadSettings(String dir) {
+		
+		FileHandle file = Gdx.files.local(dir+"settings.jsf");
+		Json json = new Json();
+		if (file.exists()) {
+			settings = json.fromJson(RMESettings.class, file);
+			System.out.println("Settings succesfully loaded");
+		}
+		else
+			settings = new RMESettings(file);
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static void loadStrings(String dir) {
+		strs = new ObjectMap<String, String>();
+		
+		FileHandle file = Gdx.files.local(dir+lang+"/strings.jsl");
+		Json json = new Json();
+		if (file.exists()) 
+		{
+			strs = json.fromJson(ObjectMap.class, file);
+			System.out.println("Strings succesfully loaded");
+		}
+		else
+			json.toJson(strs, file);
 	}
 	
 	private static void loadIntTextures(String dir) {

@@ -1,9 +1,12 @@
 package net.youtoolife.supernova.handlers;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
@@ -41,6 +44,7 @@ public class RMEPack implements Json.Serializable {
 	private Array<ObjectX> remObjectX = new Array<ObjectX>();
 	private Array<Bullet> remBullet = new Array<Bullet>();
 	private Background background = new Background();
+	private Array<RMEShader> shaders = new Array<RMEShader>();
 	public String sfx = "";
 	
 	private boolean game = false;
@@ -63,6 +67,9 @@ public class RMEPack implements Json.Serializable {
 		this.setPlayer(player);
 		
 	}
+	
+	
+
 
 	public Player getPlayer() {
 		if (player != null)
@@ -153,6 +160,12 @@ public class RMEPack implements Json.Serializable {
 		if (getOpps() == null)
 			setOpps(new Array<Opponent>());
 		getOpps().add(opponent);
+	}
+	
+	public void addShader(RMEShader shader) {
+		if (getShaders() == null)
+			setShaders(new Array<RMEShader>());
+		shaders.add(shader);
 	}
 
 
@@ -483,6 +496,10 @@ public class RMEPack implements Json.Serializable {
 	public Array<Bullet> getPBullet() {
 		return pBullets;
 	}
+	
+	public Array<RMEShader> getShaders() {
+		return shaders;
+	}
 
 	public void setWalls(Array<Wall> walls) {
 		this.walls = walls;
@@ -501,6 +518,10 @@ public class RMEPack implements Json.Serializable {
 	}
 	public void setCheckPoints(Array<CheckPoint> checkPoins) {
 		this.checkPoints = checkPoins;
+	}
+	
+	public void setShaders(Array<RMEShader> checkPoins) {
+		this.shaders = checkPoins;
 	}
 
 	public boolean isGame() {
