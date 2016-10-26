@@ -56,11 +56,13 @@ import net.youtoolife.supernova.handlers.WorldContactListener;
 import net.youtoolife.supernova.handlers.ai.AStarMap;
 import net.youtoolife.supernova.handlers.ai.AStartPathFinding;
 import net.youtoolife.supernova.handlers.ai.Node;
+import net.youtoolife.supernova.handlers.gui.RMEMessage;
 import net.youtoolife.supernova.models.CheckPoint;
 import net.youtoolife.supernova.models.Door;
 import net.youtoolife.supernova.models.ObjectX;
 import net.youtoolife.supernova.models.Opponent;
 import net.youtoolife.supernova.models.Player;
+import net.youtoolife.supernova.models.Sensor;
 import net.youtoolife.supernova.models.SurfaceX;
 import net.youtoolife.supernova.models.Wall;
 import static net.youtoolife.supernova.handlers.B2DVars.PM;
@@ -79,7 +81,7 @@ public class Surface extends ScreenAdapter {
 	
 	
 	
-	ShapeRenderer shapeRenderer = new ShapeRenderer();
+	public static ShapeRenderer shapeRenderer = new ShapeRenderer();
 	
 	public static Rectangle rect = new Rectangle(0, 0, 128, 128);	
 	public static Rectangle rect2 = new Rectangle(100, 0, 100, 100);
@@ -447,8 +449,13 @@ public class Surface extends ScreenAdapter {
 		bufferTexture = new TextureRegion(frameBuff.getColorBufferTexture());
 		
 		
-		pack.addShader(new RMEShader("space01.glsl"));
-		pack.addShader(new RMEShader("test.glsl"));
+		//pack.addShader(new RMEShader("space01.glsl"));
+		//pack.addShader(new RMEShader("test.glsl"));
+		pack.addMsg(new RMEMessage("Добро пожаловать в команду YouTooLife Team!\n"
+				+ "Мы рады приветствовать Вас\n"
+				+ "Надеюсь, что ты умрешь   :)\n"
+				+ "Зиг Хай \\0\n"
+				+ "Ну ты и пидор!::10"));
 		
 	}
 	
@@ -556,9 +563,36 @@ public class Surface extends ScreenAdapter {
 										rect.getX()+128*i, rect.getY()+128*j, drawShape, drawRect));
 					}
 						
-					if (currentType.equalsIgnoreCase("Player")) 
+					if (currentType.equalsIgnoreCase("Player")) {
 						pack.setPlayer(new Player(Assets.getTexture(currentType+"/"+currentImg), rect.getX()+128*i, rect.getY()+128*j));
+						//pack.getPlayer().getBody().setUserData("sadfasfasfQsdf");
+					}
 				
+					
+					if (currentType.equalsIgnoreCase("Sensor")) {
+						//	if (!drawShape)
+						final int x = i, y = j;
+						
+						pack.addSensor(new Sensor(Assets.getTexture(currentType+"/"+currentImg), 
+								rect.getX()+128*i, rect.getY()+128*j, drawShape, drawRect));
+						
+						Gdx.input.getTextInput(new TextInputListener() {
+							
+							@Override
+							public void input(String text) {
+								// TODO Auto-generated method stub
+								pack.getSensors().peek().setAction(text);
+							}
+							
+							@Override
+							public void canceled() {
+								// TODO Auto-generated method stub
+								
+							}
+						}, "Input CMD:", "", "");
+							
+					}
+					
 				}
 		}
 	}
@@ -880,11 +914,10 @@ public class Surface extends ScreenAdapter {
 		//game.batcher.setProjectionMatrix(guiCam.combined);
 		
 		
-		game.batcher.enableBlending();
-		game.batcher.begin();
+		
 	/////-------GAME-------////
-		pack.draw(game.batcher);
-		game.batcher.end();
+		pack.draw(game.batcher, shapeRenderer);
+		
 		//game.batcher.setShader(null);
 		
 		

@@ -24,6 +24,7 @@ public class RMEGUI implements Json.Serializable {
 	public RMEGUI() {
 		
 	}
+	
 
 	
 	public void del(float x, float y) {

@@ -2,6 +2,8 @@ package net.youtoolife.supernova.handlers;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -9,12 +11,14 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 
 import net.youtoolife.supernova.handlers.ai.AStarMap;
 import net.youtoolife.supernova.handlers.ai.AStartPathFinding;
 import net.youtoolife.supernova.handlers.ai.GraphGenerator;
 import net.youtoolife.supernova.handlers.ai.GraphPathImp;
 import net.youtoolife.supernova.handlers.ai.Node;
+import net.youtoolife.supernova.handlers.gui.RMEMessage;
 import net.youtoolife.supernova.models.Background;
 import net.youtoolife.supernova.models.Bullet;
 import net.youtoolife.supernova.models.CheckPoint;
@@ -22,6 +26,7 @@ import net.youtoolife.supernova.models.Door;
 import net.youtoolife.supernova.models.ObjectX;
 import net.youtoolife.supernova.models.Opponent;
 import net.youtoolife.supernova.models.Player;
+import net.youtoolife.supernova.models.Sensor;
 import net.youtoolife.supernova.models.SurfaceX;
 import net.youtoolife.supernova.models.Wall;
 import net.youtoolife.supernova.screens.Surface;
@@ -45,7 +50,13 @@ public class RMEPack implements Json.Serializable {
 	private Array<Bullet> remBullet = new Array<Bullet>();
 	private Background background = new Background();
 	private Array<RMEShader> shaders = new Array<RMEShader>();
+	private Array<RMEMessage> msgs = new Array<RMEMessage>();
+	private Array<RMEMessage> remMsgs = new Array<RMEMessage>();
+	private Array<Sensor> sensors = new Array<Sensor>();
 	public String sfx = "";
+	
+	
+	public RMEHandler handler = null;
 	
 	private boolean game = false;
 	
@@ -59,13 +70,13 @@ public class RMEPack implements Json.Serializable {
     public GraphPathImp resultPath = new GraphPathImp();
 	
 	public RMEPack() {
-		
+		handler = new RMEHandler(this);
 	}
 	
 
 	public RMEPack(Player player, Array<RMESprite> arr) {
 		this.setPlayer(player);
-		
+		handler = new RMEHandler(this);
 	}
 	
 	
@@ -167,6 +178,18 @@ public class RMEPack implements Json.Serializable {
 			setShaders(new Array<RMEShader>());
 		shaders.add(shader);
 	}
+	
+	public void addMsg(RMEMessage msg) {
+		if (msgs == null)
+			setMessages(new Array<RMEMessage>());
+		msgs.add(msg);
+	}
+	
+	public void addSensor(Sensor msg) {
+		if (sensors == null)
+			sensors = new Array<Sensor>();
+		sensors.add(msg);
+	}
 
 
 	@Override
@@ -178,6 +201,7 @@ public class RMEPack implements Json.Serializable {
 		json.writeValue("objects", objects);
 		json.writeValue("player", player);
 		json.writeValue("opponents", opps);
+		json.writeValue("sensors", sensors);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -190,6 +214,7 @@ public class RMEPack implements Json.Serializable {
 		objects = json.readValue("objects", Array.class, jsonData);
 		player = json.readValue("player", Player.class, jsonData);
 		opps = json.readValue("opponents", Array.class, jsonData);
+		sensors = json.readValue("sensors", Array.class, jsonData);
 		
 		
 		System.out.println("walls count:" +walls.size);
@@ -226,10 +251,23 @@ public class RMEPack implements Json.Serializable {
 				if (isGame())
 				sur.update(delta);
 		
+		if (sensors != null)
+			for (Sensor sur:sensors)
+				if (isGame())
+				sur.update(delta);
+		
+		if (handler != null)
+			if (isGame())
+				handler.update(delta);
+		
 		removeFromWorld();
 	}
 	
-	public void draw(SpriteBatch batcher) {
+	public void draw(SpriteBatch batcher, ShapeRenderer shape) {
+
+		
+		batcher.enableBlending();
+		batcher.begin();
 		if (surface != null)
 		for (SurfaceX sur:surface)
 			if (!sur.isDraw())
@@ -250,6 +288,10 @@ public class RMEPack implements Json.Serializable {
 			for (CheckPoint sur:checkPoints)
 				if (!sur.isDraw())
 				sur.draw(batcher);
+		
+		if (sensors != null)
+			for (Sensor sur:sensors)
+				sur.draw(batcher);
 
 		if (player != null) {
 			player.draw(batcher);
@@ -264,6 +306,15 @@ public class RMEPack implements Json.Serializable {
 		if (pBullets != null)
 			for (Bullet sur:pBullets)
 				sur.draw(batcher);
+		
+		
+		
+		batcher.end();
+		
+		if (msgs != null) {
+			for (RMEMessage sur:msgs)
+				sur.draw(batcher, Surface.shapeRenderer);
+		}
 	}
 	
 	public void drawShape(ShapeRenderer shapeRenderer) {
@@ -316,6 +367,9 @@ public class RMEPack implements Json.Serializable {
 				}
 				sur.drawWay(shapeRenderer);
 			}
+		
+		
+		
 	}
 	
 	public void drawShapeLine(ShapeRenderer shapeRenderer) {
@@ -434,6 +488,9 @@ public class RMEPack implements Json.Serializable {
 		for (SurfaceX opp:remSurfaceX ) {
 			surface.removeValue(opp, false);
 		}
+		for (RMEMessage opp:remMsgs) {
+			msgs.removeValue(opp, false);
+		}
 		
 	}
 	
@@ -462,6 +519,11 @@ public class RMEPack implements Json.Serializable {
 	}
 	public void removeBullet(Bullet wall) {
 		remBullet.add(wall);
+		//Surface.world.destroyBody(wall.getBody());
+	}
+	
+	public void removeMsg(RMEMessage wall) {
+		remMsgs.add(wall);
 		//Surface.world.destroyBody(wall.getBody());
 	}
 	
@@ -500,6 +562,16 @@ public class RMEPack implements Json.Serializable {
 	public Array<RMEShader> getShaders() {
 		return shaders;
 	}
+	
+	public Array<RMEMessage> getMsg() {
+		return msgs;
+	}
+	
+	public Array<Sensor> getSensors() {
+		return sensors;
+	}
+	
+	
 
 	public void setWalls(Array<Wall> walls) {
 		this.walls = walls;
@@ -522,6 +594,10 @@ public class RMEPack implements Json.Serializable {
 	
 	public void setShaders(Array<RMEShader> checkPoins) {
 		this.shaders = checkPoins;
+	}
+	
+	public void setMessages(Array<RMEMessage> checkPoins) {
+		this.msgs = checkPoins;
 	}
 
 	public boolean isGame() {

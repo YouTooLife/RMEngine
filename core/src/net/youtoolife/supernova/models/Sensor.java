@@ -30,6 +30,8 @@ public class Sensor extends RMESprite implements Json.Serializable {
 	public String name = "noname";
 	public int id = 0;
 	
+	public boolean touched = false;
+	
 	public Sensor() {
 		 super();
 		 //bounds = new Rectangle(0,0, 128, 128);
@@ -66,10 +68,11 @@ public void createBody() {
 		fixtureDef.isSensor = true;
 		//fixtureDef.restitution = 0.01f/MP; 
 		body.createFixture(fixtureDef);
+		body.setUserData(this);
 		shape.dispose();
 	}
 	
-	public Sensor(Texture ws, float x, float y, String action, boolean draw, boolean rect) {
+	public Sensor(Texture ws, float x, float y, boolean draw, boolean rect) {
 		super(ws, x, y);
 		this.setDraw(draw);
 		this.setRect(rect);
@@ -77,7 +80,7 @@ public void createBody() {
 		setSize(128, 128);
 		setColor(Surface.currentColor);
 		createBody();
-		this.action = action;
+		//this.action = action;
 	}
 	
 	/*public Door(Texture ws, int frame_cols, int frame_rows, int animStart, int animStop, boolean animActive, float animSpeed) {
@@ -128,6 +131,10 @@ public void createBody() {
 
 	public void setRect(boolean rect) {
 		this.rect = rect;
+	}
+	
+	public void setAction(String action) {
+		this.action = action;
 	}
 	
 	public Body getBody() {
