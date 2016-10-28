@@ -70,13 +70,13 @@ public class RMEPack implements Json.Serializable {
     public GraphPathImp resultPath = new GraphPathImp();
 	
 	public RMEPack() {
-		handler = new RMEHandler(this);
+		handler = new RMEHandler();
 	}
 	
 
 	public RMEPack(Player player, Array<RMESprite> arr) {
 		this.setPlayer(player);
-		handler = new RMEHandler(this);
+		handler = new RMEHandler();
 	}
 	
 	
