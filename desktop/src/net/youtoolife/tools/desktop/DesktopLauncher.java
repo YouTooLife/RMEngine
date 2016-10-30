@@ -13,6 +13,10 @@ public class DesktopLauncher {
 		config.width = 1280;
 		config.height = 768;
 		//config.fullscreen = true;
+		//config.width = 640;
+		//config.height = 480;
+		//config.width = 2048;
+		//config.height = 1080;
 		new LwjglApplication(new RMEBuilder(), config);
 		//
 	}

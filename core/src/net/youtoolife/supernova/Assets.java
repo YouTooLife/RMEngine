@@ -37,6 +37,7 @@ public class Assets {
 		
 		if (bassMode) {
 			RMESound.initNativeBass();
+			RMESound.loadFiles("sounds/");
 			RMESound.loadFiles("SFX/");
 		}
 		loadIntTextures("textures/");
@@ -59,6 +60,22 @@ public class Assets {
 		}
 		
 		System.out.println("Bitmapfonts succesfully loaded");
+		
+	}
+	
+	
+	
+	public static String getStr(String key) {
+		if (strs.containsKey(key)) {
+			return strs.get(key);
+		}
+		else {
+			strs.put(key, key);
+			FileHandle file = Gdx.files.local("contents/"+lang+"/strings.jsl");
+			Json json = new Json();
+			json.toJson(strs, file);
+			return key;
+		}
 		
 	}
 	

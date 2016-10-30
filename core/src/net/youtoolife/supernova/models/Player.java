@@ -68,7 +68,7 @@ public class Player extends RMESprite implements Json.Serializable {
 	    	
 			BodyDef bodyDef = new BodyDef();
 			bodyDef.type = BodyDef.BodyType.DynamicBody;
-			System.out.print("ORIG: "+getX()+":"+getY());
+			//System.out.println("ORIG: "+getX()+":"+getY());
 			bodyDef.position.set(
 					(getX())/MP,
 					(getY())/MP);
@@ -89,7 +89,7 @@ public class Player extends RMESprite implements Json.Serializable {
 			body.createFixture(fixtureDef);
 			body.setUserData(this);
 			shape.dispose();
-			System.out.print("body: "+body.getUserData());
+			//System.out.print("body: "+body.getUserData());
 		}
 	 
 	 public void update(float delta) {

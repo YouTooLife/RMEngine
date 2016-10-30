@@ -217,8 +217,8 @@ public class RMEPack implements Json.Serializable {
 		sensors = json.readValue("sensors", Array.class, jsonData);
 		
 		
-		System.out.println("walls count:" +walls.size);
-		aiSetup();
+		//System.out.println("walls count:" +walls.size);
+		//aiSetup();
 	}
 	
 	public void update (float delta) {

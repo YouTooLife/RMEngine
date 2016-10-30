@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.utils.Array;
 
 import net.youtoolife.supernova.Assets;
+import net.youtoolife.supernova.handlers.RMESound;
 import net.youtoolife.supernova.screens.Surface;
 
 public class RMEMessage {
@@ -17,8 +18,8 @@ public class RMEMessage {
 	public String msg;
 	public Array<String> strs;
 	public String sfx;
-	public float ctime = 0;
-	public float time;
+	public double ctime = 0;
+	public double time;
 	
 	private BitmapFont font;
 	public String fontName = "HelveticaNeue.fnt";
@@ -26,10 +27,13 @@ public class RMEMessage {
 	
 	public RMEMessage(String args) {
 		String[] str = args.split("::");
-		msg = str[0];
+		msg = Assets.getStr(str[0]);
 		time = Float.parseFloat(str[1]);
-		if (str.length > 2)
+		if (str.length > 2) {
 			sfx = str[2];
+			int chan = RMESound.playSFX(sfx);
+			time = RMESound.getTrackLen(chan);
+		}
 		if (str.length > 3)
 			fontName = str[3];
 		init();

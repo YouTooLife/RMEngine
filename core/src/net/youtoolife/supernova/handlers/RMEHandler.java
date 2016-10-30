@@ -71,6 +71,16 @@ public class RMEHandler {
 	}
 	
 	public void addCmd(String cmd) {
+		/*String[] f = cmd.split("<::");
+		if (f[0].equalsIgnoreCase("file")) {
+			addCmd(Gdx.files.local(f[1]).readString());
+			return;
+		}
+		String[] src = cmd.split("<>");
+		for (String s: src) {
+			cmds.add(parse(s));
+		}
+		*/
 		cmds.add(parse(cmd));
 	}
 	

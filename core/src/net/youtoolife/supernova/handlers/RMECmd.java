@@ -11,8 +11,9 @@ public class RMECmd {
 	private RMEPack pack = Surface.pack;
 	
 	public boolean done = false;
-	private boolean chaildDone = false, myDone = false;
+	private boolean chaildDone = false, myDone = false, postDone = true;
 	public float time = 0;
+	public double postTime = 0;
 	
 	public RMECmd(String cmd) {
 		this.cmd = cmd;
@@ -28,7 +29,10 @@ public class RMECmd {
 		String[] args = cmd.split("<>");
 		
 		if (args[0].equalsIgnoreCase("msg")) {
-			pack.addMsg(new RMEMessage(args[1]));
+			RMEMessage msg = new RMEMessage(args[1]);
+			pack.addMsg(msg);
+			postTime = msg.time;
+			postDone = false;
 		}
 		
 	}
@@ -53,7 +57,16 @@ public class RMECmd {
 			myDone = true;
 		}
 		
-		done = myDone && chaildDone;
+		if (!postDone)
+		if (postTime > 0) {
+			postTime -= delta;
+			return;
+		}
+		else {
+			postDone = true;
+		}
+		
+		done = myDone && chaildDone && postDone;
 		
 	}
 

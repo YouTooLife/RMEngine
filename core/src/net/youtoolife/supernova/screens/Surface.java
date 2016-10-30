@@ -285,6 +285,7 @@ public class Surface extends ScreenAdapter {
 						del = false;
 				}
 				if (keycode == Keys.U) {
+					RMESound.playSFX("01");
 					if (!sNode)
 						sNode = true;
 					else
@@ -362,11 +363,11 @@ public class Surface extends ScreenAdapter {
 						@Override
 						public void input(String text) {
 							Json json = new Json();
-							json.toJson(pack, new FileHandle(text+".jMap"));
+							json.toJson(pack, new FileHandle("levels/"+text+".jMap"));
 							
 							RMECrypt crypt = new RMECrypt();
 							String s = json.toJson(pack);
-							FileHandle filehandle = Gdx.files.local(text+".level");
+							FileHandle filehandle = Gdx.files.local("levels/"+text+".level");
 							filehandle.writeBytes(crypt.encrypt(s, "YouTooLife1911"), false);
 							
 							
@@ -390,7 +391,9 @@ public class Surface extends ScreenAdapter {
 							String s = crypt.decrypt(filehandle.readBytes(), "YouTooLife1911");
 							pack = json.fromJson(RMEPack.class, s);
 							*/
-							pack = json.fromJson(RMEPack.class, new FileHandle(text+".jMap"));
+							FileHandle filehandle = Gdx.files.local("levels/"+text+".jMap");
+							System.out.println(filehandle.exists());
+							pack = json.fromJson(RMEPack.class, filehandle);
 						}
 						
 						@Override
@@ -451,12 +454,13 @@ public class Surface extends ScreenAdapter {
 		
 		//pack.addShader(new RMEShader("space01.glsl"));
 		//pack.addShader(new RMEShader("test.glsl"));
-		pack.addMsg(new RMEMessage("Добро пожаловать в команду YouTooLife Team!\n"
+		/*pack.addMsg(new RMEMessage("Добро пожаловать в команду YouTooLife Team!\n"
 				+ "Мы рады приветствовать Вас\n"
 				+ "Надеюсь, что ты умрешь   :)\n"
 				+ "Зиг Хай \\0\n"
 				+ "Ну ты и пидор!::10"));
-		
+		*/
+		pack.addMsg(new RMEMessage("welcome::10"));
 	}
 	
 	
@@ -571,7 +575,6 @@ public class Surface extends ScreenAdapter {
 					
 					if (currentType.equalsIgnoreCase("Sensor")) {
 						//	if (!drawShape)
-						final int x = i, y = j;
 						
 						pack.addSensor(new Sensor(Assets.getTexture(currentType+"/"+currentImg), 
 								rect.getX()+128*i, rect.getY()+128*j, drawShape, drawRect));
@@ -601,7 +604,7 @@ public class Surface extends ScreenAdapter {
 		types.clear();
 		images.clear();
 		FileHandle file = Gdx.files.local("Types");
-		System.out.println(file.isDirectory());
+		//System.out.println(file.isDirectory());
 		if (file.isDirectory()) {
 			FileHandle[] files = file.list();
 			System.out.println(files.length);
@@ -609,7 +612,7 @@ public class Surface extends ScreenAdapter {
 			for (int i = 0; i < files.length; i++) {
 				if (!files[i].name().contains(".")) {
 					Sprite sprite = new Sprite(Assets.getTexture("field"));
-					System.out.println("1");
+					//System.out.println("1");
 					sprite.setSize(100, 20);
 					sprite.setPosition(10, height - 25 * iy - 150);
 					types.add(sprite);
@@ -625,7 +628,7 @@ public class Surface extends ScreenAdapter {
 				}
 			}
 			currentType = labels.get(0).getText().toString();
-			System.out.println(currentType);
+			//System.out.println(currentType);
 			idType = 0;
 		}
 		refreshImages(currentType);
@@ -635,24 +638,24 @@ public class Surface extends ScreenAdapter {
 		images.clear();
 		imageNames.clear();
 		FileHandle file = Gdx.files.local("Types/" + type);
-		System.out.println(file.isDirectory());
+		//System.out.println(file.isDirectory());
 		if (file.isDirectory()) {
 			FileHandle[] files = file.list();
-			System.out.println(files.length);
+			//System.out.println(files.length);
 			int posX = 0, posY = 0;
 			for (int i = 0; i < files.length; i++) {
 				if (files[i].name().contains(".png")
 						|| files[i].name().contains(".PNG")
 						|| files[i].name().contains(".jpg")
 						|| files[i].name().contains(".JPG")) {
-					System.out.println(files[i]);
+					//System.out.println(files[i]);
 					Sprite sprite = new Sprite(new Texture(files[i]));
 					sprite.setSize(50, 50);
 					sprite.setPosition(width - 50 * 3 - 5 * 3 + 55 * posX,
 							height - 55 * posY - 150);
 					images.add(sprite);
 					imageNames.add(files[i].nameWithoutExtension());
-					System.out.println(files[i].nameWithoutExtension());
+					//System.out.println(files[i].nameWithoutExtension());
 					posX++;
 					if (posX > 2) {
 						posX = 0;
@@ -661,7 +664,7 @@ public class Surface extends ScreenAdapter {
 				}
 			}
 			currentImg = imageNames.get(0);
-			System.out.println(currentImg);
+			//System.out.println(currentImg);
 			idImg = 0;
 		}
 	}
